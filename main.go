@@ -402,92 +402,91 @@ var alarms [][]string
 
 func main() {
 	var config Config
-	if len(os.Args) == 0 {
-		fmt.Println("No command line args passed using default settings.")
-		config.IP = "127.0.0.1"
-		config.Port = 9899
-		config.BedCount = 5 
-		config.SendAlarms = true
-	} else {
+  baseConfig := Config {
+		IP : "127.0.0.1",
+		Port : 9899,
+		BedCount : 20,
+		SendAlarms : true,
+  }
 
-    if ip := os.Getenv("IP"); ip != "" {
-			config.IP = ip 
-		} else {
-			config.IP = "127.0.0.1"
-		}
+  if ip := os.Getenv("IP"); ip != "" {
+    config.IP = ip 
+  } else {
+    config.IP = baseConfig.IP
+  }
 
-    if port := os.Getenv("PORT"); port != "" {
-			port, err := strconv.Atoi(port)
-			if err != nil {
-				log.Fatalf("Something broke trying to set the port %s", err)
-			} else {
-				config.Port = port
-			}
-		} else {
-			config.Port = 9899
-		}
+  if port := os.Getenv("PORT"); port != "" {
+    port, err := strconv.Atoi(port)
+    if err != nil {
+      log.Fatalf("Something broke trying to set the port %s", err)
+    } else {
+      config.Port = port
+    }
+  } else {
+    config.Port = baseConfig.Port
+  }
 
-    if bedCountStr := os.Getenv("BED_COUNT"); bedCountStr != "" {
-			bedCount, err := strconv.Atoi(bedCountStr)
-			if err != nil {
-				log.Fatalf("Something broke trying to set the bed count: %s", err)
-			} else {
-				config.BedCount = bedCount
-			}
-		} else {
-			config.BedCount = 20
-		}
-    
-    if alarms := os.Getenv("SEND_ALARMS"); alarms != "" {
-			sendAlarms, err := strconv.ParseBool(alarms)
-			if err != nil {
-				log.Fatalf("Something broke trying to set the sendAlarms flag: %s", err)
-			} else {
-				config.SendAlarms = sendAlarms
-			}
-		} else {
-			config.SendAlarms = true
-		}
+  if bedCountStr := os.Getenv("BED_COUNT"); bedCountStr != "" {
+    bedCount, err := strconv.Atoi(bedCountStr)
+    if err != nil {
+      log.Fatalf("Something broke trying to set the bed count: %s", err)
+    } else {
+      config.BedCount = bedCount
+    }
+  } else {
+    config.BedCount = baseConfig.BedCount 
+  }
+  
+  if alarms := os.Getenv("SEND_ALARMS"); alarms != "" {
+    sendAlarms, err := strconv.ParseBool(alarms)
+    if err != nil {
+      log.Fatalf("Something broke trying to set the sendAlarms flag: %s", err)
+    } else {
+      config.SendAlarms = sendAlarms
+    }
+  } else {
+    config.SendAlarms = baseConfig.SendAlarms 
+  }
 		config.Print()
 
+  if config.SendAlarms {
+    alarms = LoadAlarms()
+  }
+
+  bedList := make([]Bed, 0, config.BedCount)
+
+  for i := 0; i < config.BedCount; i++ {
+    bed := Bed{
+      Unit: "LABMR",
+      Bed:  strconv.Itoa(i),
+      ReconnectVitalWaveChan: make(chan struct{}),
+    }
+
+    bed.StartVitalWave(&config)
     if config.SendAlarms {
-      alarms = LoadAlarms()
+      bed.StartAlarm(&config)
+      bed.ReconnectAlarmChan = make(chan struct{})
     }
 
-    bedList := make([]Bed, 0, config.BedCount)
+    bedList = append(bedList, bed)
 
-		for i := 0; i < config.BedCount; i++ {
-			bed := Bed{
-				Unit: "LABMR",
-				Bed:  strconv.Itoa(i),
-        ReconnectVitalWaveChan: make(chan struct{}),
-			}
-
-			bed.StartVitalWave(&config)
-			if config.SendAlarms {
-				bed.StartAlarm(&config)
-        bed.ReconnectAlarmChan = make(chan struct{})
-			}
-
-      bedList = append(bedList, bed)
-
-      if i % 5 == 0 && i != 0 {
-        time.Sleep(time.Second)
-      }
-
-      if i % 25 == 0 && i != 0 {
-        time.Sleep(time.Minute * 5)
-      }
-
-      time.Sleep(time.Millisecond * 50)
-		}
-
-    fmt.Println("All configured beds are now sending!")
-    
-    <-make(chan struct{})
-    for _, bed := range bedList{
-      bed.CloseConns()
+    if i % 5 == 0 && i != 0 {
+      time.Sleep(time.Second)
     }
+
+    if i % 25 == 0 && i != 0 {
+      time.Sleep(time.Minute * 5)
+    }
+
+    time.Sleep(time.Millisecond * 50)
+  }
+
+  fmt.Println("All configured beds are now sending!")
+  
+  <-make(chan struct{})
+  for _, bed := range bedList{
+    bed.CloseConns()
+  }
 
   }
 }
