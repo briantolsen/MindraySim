@@ -402,7 +402,8 @@ var alarms [][]string
 
 func main() {
 	var config Config
-  baseConfig := Config {
+
+  baseConfig :=Config {
 		IP : "127.0.0.1",
 		Port : 9899,
 		BedCount : 20,
@@ -486,7 +487,5 @@ func main() {
   <-make(chan struct{})
   for _, bed := range bedList{
     bed.CloseConns()
-  }
-
   }
 }
