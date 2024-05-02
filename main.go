@@ -18,6 +18,7 @@ type Config struct {
 	Port       int
 	BedCount   int
 	SendAlarms bool
+  Unit string
 }
 
 func (c *Config) Print() {
@@ -408,6 +409,7 @@ func main() {
 		Port : 9899,
 		BedCount : 20,
 		SendAlarms : true,
+    Unit: "LAB",
   }
 
   if ip := os.Getenv("IP"); ip != "" {
@@ -448,7 +450,14 @@ func main() {
   } else {
     config.SendAlarms = baseConfig.SendAlarms 
   }
-		config.Print()
+
+  if unitName := os.Getenv("UNIT_NAME"); unitName != "" {
+    config.Unit = unitName
+  } else {
+    config.Unit = baseConfig.Unit
+  }
+
+  config.Print()
 
   if config.SendAlarms {
     alarms = LoadAlarms()
@@ -458,7 +467,7 @@ func main() {
 
   for i := 0; i < config.BedCount; i++ {
     bed := Bed{
-      Unit: "LABMR",
+      Unit: config.Unit,
       Bed:  strconv.Itoa(i),
       ReconnectVitalWaveChan: make(chan struct{}),
     }
