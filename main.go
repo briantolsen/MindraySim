@@ -341,9 +341,10 @@ func (b *Bed) SendAlarms() {
     if err != nil {
       log.Println("Error writing alarm message, connection may have been lost.")
       b.ReconnectAlarmChan <- struct{}{}
+    } else {
+      fmt.Printf("Sent alarm %s for %s _ %s \n", alm[0], b.Unit, b.Bed)
     }
 
-    fmt.Printf("Sent alarm %s for %s _ %s \n", alm[0], b.Unit, b.Bed)
     filledTemplate.Reset()
 
 		//Wait a random number of seconds before sending the end
@@ -484,8 +485,8 @@ func main() {
       time.Sleep(time.Second)
     }
 
-    if i % 25 == 0 && i != 0 {
-      time.Sleep(time.Minute * 5)
+    if i % 50 == 0 && i != 0 {
+      time.Sleep(time.Minute * 2)
     }
 
     time.Sleep(time.Millisecond * 50)
